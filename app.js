@@ -3,6 +3,8 @@
 const express = require("express");
 const bodyParser = require("body-parser");
 const mongoose = require("mongoose");
+const ejs = require('ejs');
+const _ = require('lodash');
 
 
 
@@ -36,7 +38,12 @@ const item3 = new Item({
 
 const defaultItems = [item1, item2, item3];
 
+const listSchema = {
+  name: String,
+  items: [itemSchema]
+};
 
+const List = mongoose.model('List', listSchema);
 
 
 app.get("/", function (req, res) {
@@ -84,9 +91,32 @@ app.post("/delete", function(req,res) {
   res.redirect('/')
 })
 
-app.get("/work", function (req, res) {
-  res.render("list", { listTitle: "Work List", newListItems: workItems });
-});
+app.get("/:listTitle", function(req, res) {
+  const customListTitle = req.params.listTitle
+  
+  List.findOne({name: customListTitle}, function(err, foundList) {
+    if (!err) {
+      if (!foundList) {
+        const list = new List({
+          name: customListTitle,
+          items:defaultItems
+        });
+        
+        list.save()
+        res.render("list", {listTitle: customListTitle, newListItems: defaultItems});
+      } else {
+        res.render("list", {listTitle: customListTitle, newListItems: foundList.items});
+      }
+    }
+  })
+
+
+})
+
+
+// app.get("/work", function (req, res) {
+//   res.render("list", { listTitle: "Work List", newListItems: workItems });
+// });
 
 app.get("/about", function (req, res) {
   res.render("about");
