@@ -68,27 +68,47 @@ app.get("/", function (req, res) {
 
 app.post("/", function (req, res) {
 
+  const listName = req.body.list
   const itemName = req.body.newItem;
   const newItem = new Item({
     name: itemName
   });
 
-  newItem.save();
-  res.redirect('/')
+  if (listName === 'Today') {
+    newItem.save();
+    res.redirect('/');
+  } else {
+    List.findOne({name: listName}, function(err, foundList) {
+      foundList.items.push(newItem);
+      foundList.save();
+      res.redirect("/" + listName);
+    })
+  }
+
   
 });
 
 app.post("/delete", function(req,res) {
-  console.log(req.body.checkbox);
+  const listName = req.body.listName;
   const checkedItemId = req.body.checkbox;
-  Item.findByIdAndRemove(checkedItemId, function(err) {
-    if (err) {
-      console.log(err);
-    } else {
-      console.log('Successfully deleted item from list');
-    }
-  })
-  res.redirect('/')
+
+  if (listName === 'Today') {
+    Item.findByIdAndRemove(checkedItemId, function(err) {
+      if (err) {
+        console.log(err);
+      } else {
+        console.log('Successfully deleted item from list');
+      }
+    })
+    res.redirect('/');
+  } else {
+    List.findOneAndUpdate({name: listName}, {$pull: {items: {_id: checkedItemId}}}, function(err, foundList) {
+      if (!err) {
+        res.redirect("/" + listName);
+      }
+    })
+  }
+
 })
 
 app.get("/:listTitle", function(req, res) {
@@ -103,7 +123,7 @@ app.get("/:listTitle", function(req, res) {
         });
         
         list.save()
-        res.render("list", {listTitle: customListTitle, newListItems: defaultItems});
+        res.redirect("/" + customListTitle);
       } else {
         res.render("list", {listTitle: customListTitle, newListItems: foundList.items});
       }
